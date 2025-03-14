@@ -6,6 +6,144 @@ const defaultOptions = {
     musicSelection: ['Rock', 'Jazz', 'Punk']
 }
 
+class OffState {
+    constructor(lamp) {
+        this.lamp = lamp;
+    }
+
+    toggle() {
+        this.lamp.setState(this.lamp.lowBrightnessState);
+        console.log('Lamp turned on to low');
+    }
+
+    increaseBrightness() {
+        throw new Error('Lamp off');
+    }
+}
+
+class LowBrightnessState {
+    constructor(lamp) {
+        this.lamp = lamp;
+    }
+
+    toggle() {
+        this.lamp.setState(this.lamp.offState);
+        console.log('Lamp off');
+    }
+
+    increaseBrightness() {
+        this.lamp.setState(this.lamp.mediumBrightnessState);
+        console.log('Lamp brightness turned to medium');
+    }
+}
+
+class MediumBrightnessState {
+    constructor(lamp) {
+        this.lamp = lamp;
+    }
+
+    toggle() {
+        this.lamp.setState(this.lamp.offState);
+        console.log('Lamp off');
+    }
+
+    increaseBrightness() {
+        this.lamp.setState(this.lamp.highBrightnessState);
+        console.log('Lamp brightness max');
+    }
+}
+
+class HighBrightnessState {
+    constructor(lamp) {
+        this.lamp = lamp;
+    }
+
+    toggle() {
+        this.lamp.setState(this.lamp.offState);
+        console.log('Lamp off');
+    }
+
+    increaseBrightness() {
+        console.log('Lamp is already on full brightness');
+    }
+}
+
+class offState2 {
+    constructor(player) {
+        this.player = player;
+    }
+
+    toggle() {
+        this.player.setState(this.player.idleState);
+    }
+
+    nextTrack() {
+        throw new Error('Turned off');
+    }
+
+    playPause() {
+        throw new Error('Cannot pause - off.');
+    }
+}
+
+class idleState {
+    constructor(player) {
+        this.player = player;
+    }
+
+    toggle() {
+        this.player.setState(this.player.offState2);
+    }
+
+    nextTrack() {
+        console.log('Starting to play first track...');
+        this.player.setState(this.player.playingState);
+    }
+
+    playPause() {
+        console.log('Starting to play...')
+        this.player.setState(this.player.playingState);
+    }
+}
+
+class playingState {
+    constructor(player) {
+        this.player = player;
+    }
+
+    toggle() {
+        this.player.setState(this.player.offState2);
+    }
+
+    nextTrack() {
+        console.log('Next track playing...');
+    }
+
+    playPause() {
+        console.log('Pausing...');
+        this.state = this.player.pausedState;
+    }
+}
+
+class pausedState {
+    constructor(player) {
+        this.player = player;
+    }
+
+    toggle() {
+        this.player.setState(this.player.offState2);
+    }
+
+    nextTrack() {
+        console.log('Next track playing, but paused.');
+    }
+
+    playPause() {
+        console.log('Resuming.');
+        this.state = this.player.playingState;
+    }
+}
+
 export default class SmartHome {
     constructor(options) {
         options = options || defaultOptions
@@ -18,109 +156,76 @@ export default class SmartHome {
     }
 
     toggleLamp() {
-        if (this.currentDevice instanceof Lights) {
-            this.currentDevice.lampOffOn();
-            this.currentDevice = null;
-            console.log('lamp is now on')
-        } else {
-            this.currentDevice = new Lights(this.options);
-            this.currentDevice.lampOffOn();
-            console.log('lamp is now off')
-        }
+        this.currentDevice = new Lights(this.options);
+        this.currentDevice.toggleLamp();
     }
 
     togglePlayer() {
-        if (this.currentDevice instanceof Player) {
-            this.currentDevice.playerOffOn();
-            this.currentDevice = null;
-            console.log('player is now off')
-        } else {
-            this.currentDevice = new Player(this.options);
-            this.currentDevice.playerOffOn();
-            console.log('player is now on')
-        }
-    }
-
-    increaseLampBrightness() {
-        if (this.currentDevice instanceof Lights) {
-            this.currentDevice.increaseLampBrightness();
-        } else {
-            throw new Error('Not working with lights')
-        }
-    }
-
-    lampOffOn() {
-        if (this.currentDevice instanceof Lights) {
-            this.currentDevice.lampOffOn();
-        } else {
-            throw new Error('Not working with lights')
-        }
-    }
-
-    playPause() {
-        if (this.currentDevice instanceof Player) {
-            this.currentDevice.playPause();
-        } else {
-            throw new Error('Not working with player')
-        }
+        this.currentDevice = new Player(this.options);
+        this.currentDevice.toggle();
     }
 
     nextTrack() {
-        if (this.currentDevice instanceof Player) {
-            this.currentDevice.nextTrack();
-        } else {
-            throw new Error('Not working with player')
-        }
+        this.currentDevice.nextTrack();
+    }
+    
+    increaseLampBrightness() {
+        this.currentDevice.increaseLampBrightness();
     }
 
+    playPause() {
+        this.currentDevice.playPause();
+    }
 }
 
 class Lights extends SmartHome {
     constructor(options) {
         super(options);
-        this.state = 0;
-        this.states = ['offState', 'lowBrightnessState', 'mediumBrightnessState', 'highBrightnessState']
+        this.offState = new OffState(this);
+        this.lowBrightnessState = new LowBrightnessState(this);
+        this.mediumBrightnessState = new MediumBrightnessState(this);
+        this.highBrightnessState = new HighBrightnessState(this);
+        this.currentState = this.offState;
     }
+    
+    setState(state) {
+        this.currentState = state;
+    }
+    
+    toggleLamp() {
+        this.currentState.toggle();
+    }
+    
     increaseLampBrightness() {
-        if (this.state === 0) {
-            throw new Error('Lights off, cannot brighten')
-        }
-        this.state + 1 > this.states.length ? this.states.length - 1 : this.state + 1;
-        console.log('Brightness increased to:', this.options.brightnessLevels[this.state])
-    }
-    lampOffOn() {
-        this.state = this.state === 0 ? 1 : 0;
+        this.currentState.increaseBrightness();
     }
 }
 
 class Player extends SmartHome {
     constructor(options) {
         super(options);
-        this.state = 0;
-        this.states = ['offState', 'idleState', 'playingState', 'pausedState']
-        this.currentSong = this.options.musicPlaying
-        this.working = false;
+        this.offState2 = new offState2(this);
+        this.idleState = new idleState(this);
+        this.playingState = new playingState(this);
+        this.pausedState = new pausedState(this);
+        this.currentState = this.offState2
     }
+
+    setState(state) {
+        this.currentState = state;
+    }
+    
+    toggle() {
+        this.currentState.toggle();
+    }
+
 
     playPause() {
-    if (this.state === 0) {
-            throw new Error('Player off, cannot play/pause')
-        }
-        this.state = this.state === 2? 3 : 2;
-        console.log('player is now in its ', this.states[this.state])
-    }
-
-    playerOffOn() {
-        this.state === 0 ? this.state = 1 : this.state = 0;
+        this.currentState.playPause();
     }
 
     nextTrack() {
-        if (this.options.musicSelection.length <= 1) {
-            throw new Error('Only one(or less) song in selection, cannot cycle!')
-        }
-        const currentIndex = this.options.musicSelection.indexOf(this.currentSong);
-        this.currentSong = this.options.musicSelection[(currentIndex + 1) % this.options.musicSelection.length];
-        console.log('Playing ', this.currentSong)
+        this.currentState.nextTrack();
     }
 }
 
@@ -131,3 +236,4 @@ home.increaseLampBrightness();
 
 home.togglePlayer();
 home.playPause();
+home.nextTrack();
